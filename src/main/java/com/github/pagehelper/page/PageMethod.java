@@ -197,6 +197,74 @@ public abstract class PageMethod {
         }
     }
 
+    // ========== 新增：Cursor分页方法 ==========
+
+    /**
+     * 开启游标分页
+     *
+     * @param cursorColumn 游标字段名（如 "id"）
+     * @param cursorValue  游标值（上次查询最后一条记录的游标值，首次查询传0或null）
+     * @param pageSize     每页大小
+     * @return Page对象
+     */
+    public static <E> Page<E> startCursor(String cursorColumn, Object cursorValue, int pageSize) {
+        return startCursor(cursorColumn, cursorValue, pageSize, true, true);
+    }
+
+    /**
+     * 开启游标分页（不查询count）
+     *
+     * @param cursorColumn 游标字段名
+     * @param cursorValue  游标值
+     * @param pageSize     每页大小
+     * @return Page对象
+     */
+    public static <E> Page<E> startCursorNoCount(String cursorColumn, Object cursorValue, int pageSize) {
+        return startCursor(cursorColumn, cursorValue, pageSize, false, true);
+    }
+
+    /**
+     * 开启游标分页（指定排序方向）
+     *
+     * @param cursorColumn 游标字段名
+     * @param cursorValue  游标值
+     * @param pageSize     每页大小
+     * @param greaterThan  true: 使用 > (配合ASC), false: 使用 < (配合DESC)
+     * @return Page对象
+     */
+    public static <E> Page<E> startCursor(String cursorColumn, Object cursorValue,
+                                          int pageSize, boolean greaterThan) {
+        return startCursor(cursorColumn, cursorValue, pageSize, DEFAULT_COUNT, greaterThan);
+    }
+
+    /**
+     * 开启游标分页（完整参数）
+     *
+     * @param cursorColumn 游标字段名
+     * @param cursorValue  游标值
+     * @param pageSize     每页大小
+     * @param count        是否查询总数
+     * @param greaterThan  比较方向
+     * @return Page对象
+     */
+    public static <E> Page<E> startCursor(String cursorColumn, Object cursorValue,
+                                          int pageSize, boolean count, boolean greaterThan) {
+        Page<E> page = new Page<>(1, pageSize, count);
+        page.setUseCursor(true);
+        page.setCursorColumn(cursorColumn);
+        page.setCursorValue(cursorValue);
+        page.setCursorGreaterThan(greaterThan);
+
+        // 保留已有的orderBy设置
+        Page<E> oldPage = getLocalPage();
+        if (oldPage != null && oldPage.isOrderByOnly()) {
+            page.setOrderBy(oldPage.getOrderBy());
+        }
+
+        setLocalPage(page);
+        return page;
+    }
+
     /**
      * 设置参数
      *

@@ -38,86 +38,112 @@ import java.util.List;
  *
  * @author liuzh/abel533/isea533
  * @version 3.6.0
- * 项目地址 : http://git.oschina.net/free/Mybatis_PageHelper
+ *          项目地址 : http://git.oschina.net/free/Mybatis_PageHelper
  */
 public class Page<E> extends ArrayList<E> implements Closeable {
     private static final long serialVersionUID = 1L;
 
-    private static final Log                       log        = LogFactory.getLog(Page.class);
+    private static final Log log = LogFactory.getLog(Page.class);
     /**
      * 记录当前堆栈,可查找到page在何处创建
      * 需开启pagehelper.debug
      */
-    private final        String                    stackTrace = PageInterceptor.isDebug() ? StackTraceUtil.current() : null;
+    private final String stackTrace = PageInterceptor.isDebug() ? StackTraceUtil.current() : null;
     /**
      * 页码，从1开始
      */
-    private              int                       pageNum;
+    private int pageNum;
     /**
      * 页面大小
      */
-    private              int                       pageSize;
+    private int pageSize;
     /**
      * 起始行
      */
-    private              long                      startRow;
+    private long startRow;
     /**
      * 末行
      */
-    private              long                      endRow;
+    private long endRow;
     /**
      * 总数
      */
-    private              long                      total;
+    private long total;
     /**
      * 总页数
      */
-    private              int                       pages;
+    private int pages;
     /**
      * 包含count查询
      */
-    private              boolean                   count      = true;
+    private boolean count = true;
     /**
      * 分页合理化
      */
-    private              Boolean                   reasonable;
+    private Boolean reasonable;
     /**
      * 当设置为true的时候，如果pagesize设置为0（或RowBounds的limit=0），就不执行分页，返回全部结果
      */
-    private              Boolean                   pageSizeZero;
+    private Boolean pageSizeZero;
     /**
      * 进行count查询的列名
      */
-    private              String                    countColumn;
+    private String countColumn;
     /**
      * 排序
      */
-    private              String                    orderBy;
+    private String orderBy;
     /**
      * 只增加排序
      */
-    private              boolean                   orderByOnly;
+    private boolean orderByOnly;
     /**
      * sql拦截处理
      */
-    private              BoundSqlInterceptor       boundSqlInterceptor;
-    private transient    BoundSqlInterceptor.Chain chain;
+    private BoundSqlInterceptor boundSqlInterceptor;
+    private transient BoundSqlInterceptor.Chain chain;
     /**
-     * 分页实现类，可以使用 {@link com.github.pagehelper.page.PageAutoDialect} 类中注册的别名，例如 "mysql", "oracle"
+     * 分页实现类，可以使用 {@link com.github.pagehelper.page.PageAutoDialect} 类中注册的别名，例如
+     * "mysql", "oracle"
      */
-    private              String                    dialectClass;
+    private String dialectClass;
     /**
      * 转换count查询时保留查询的 order by 排序
      */
-    private              Boolean                   keepOrderBy;
+    private Boolean keepOrderBy;
     /**
      * 转换count查询时保留子查询的 order by 排序
      */
-    private              Boolean                   keepSubSelectOrderBy;
+    private Boolean keepSubSelectOrderBy;
     /**
      * 异步count查询
      */
-    private              Boolean                   asyncCount;
+    private Boolean asyncCount;
+
+    // ========== Cursor分页支持 ==========
+    /**
+     * 是否启用游标分页
+     */
+    private Boolean useCursor;
+
+    /**
+     * 游标字段名（例如: "id", "created_at"等）
+     * 必须是有索引的字段，建议使用主键
+     */
+    private String cursorColumn;
+
+    /**
+     * 游标值（上次查询最后一条记录的游标字段值）
+     * 首次查询时可以为null
+     */
+    private Object cursorValue;
+
+    /**
+     * 游标比较方向
+     * true: 使用 > 比较（配合 ASC 排序）
+     * false: 使用 < 比较（配合 DESC 排序）
+     */
+    private Boolean cursorGreaterThan = true;
 
     public Page() {
         super();
@@ -157,7 +183,8 @@ public class Page<E> extends ArrayList<E> implements Closeable {
             this.pageNum = 1;
         } else {
             this.pageSize = rowBounds[1];
-            this.pageNum = rowBounds[1] != 0 ? (int) (Math.ceil(((double) rowBounds[0] + rowBounds[1]) / rowBounds[1])) : 0;
+            this.pageNum = rowBounds[1] != 0 ? (int) (Math.ceil(((double) rowBounds[0] + rowBounds[1]) / rowBounds[1]))
+                    : 0;
         }
         this.startRow = rowBounds[0];
         this.count = count;
@@ -195,7 +222,7 @@ public class Page<E> extends ArrayList<E> implements Closeable {
     }
 
     public Page<E> setPageNum(int pageNum) {
-        //分页合理化，针对不合理的页码自动处理
+        // 分页合理化，针对不合理的页码自动处理
         this.pageNum = ((reasonable != null && reasonable) && pageNum <= 0) ? 1 : pageNum;
         return this;
     }
@@ -233,7 +260,7 @@ public class Page<E> extends ArrayList<E> implements Closeable {
         } else {
             pages = 0;
         }
-        //分页合理化，针对不合理的页码自动处理
+        // 分页合理化，针对不合理的页码自动处理
         if ((reasonable != null && reasonable) && pageNum > pages) {
             if (pages != 0) {
                 pageNum = pages;
@@ -251,7 +278,7 @@ public class Page<E> extends ArrayList<E> implements Closeable {
             return this;
         }
         this.reasonable = reasonable;
-        //分页合理化，针对不合理的页码自动处理
+        // 分页合理化，针对不合理的页码自动处理
         if (this.reasonable && this.pageNum <= 0) {
             this.pageNum = 1;
             calculateStartAndEndRow();
@@ -275,7 +302,8 @@ public class Page<E> extends ArrayList<E> implements Closeable {
     }
 
     /**
-     * 设置排序字段，增加 SQL 注入校验，如果需要在 order by 使用函数，可以使用 {@link #setUnsafeOrderBy(String)} 方法
+     * 设置排序字段，增加 SQL 注入校验，如果需要在 order by 使用函数，可以使用 {@link #setUnsafeOrderBy(String)}
+     * 方法
      *
      * @param orderBy 排序字段
      */
@@ -312,6 +340,114 @@ public class Page<E> extends ArrayList<E> implements Closeable {
         return dialectClass;
     }
 
+    // ========== Cursor分页方法 ==========
+
+    public Boolean getUseCursor() {
+        return useCursor;
+    }
+
+    public Page<E> setUseCursor(Boolean useCursor) {
+        this.useCursor = useCursor;
+        return this;
+    }
+
+    public String getCursorColumn() {
+        return cursorColumn;
+    }
+
+    /**
+     * 设置游标字段名，包含SQL注入检查
+     */
+    public Page<E> setCursorColumn(String cursorColumn) {
+        if (cursorColumn != null && SqlSafeUtil.check(cursorColumn)) {
+            throw new PageException("cursor column [" + cursorColumn + "] has a risk of SQL injection");
+        }
+        this.cursorColumn = cursorColumn;
+        return this;
+    }
+
+    public Object getCursorValue() {
+        return cursorValue;
+    }
+
+    public Page<E> setCursorValue(Object cursorValue) {
+        this.cursorValue = cursorValue;
+        return this;
+    }
+
+    public Boolean getCursorGreaterThan() {
+        return cursorGreaterThan;
+    }
+
+    public Page<E> setCursorGreaterThan(Boolean cursorGreaterThan) {
+        this.cursorGreaterThan = cursorGreaterThan;
+        return this;
+    }
+
+    /**
+     * 判断是否真正启用游标分页
+     * 需要同时满足：useCursor=true 且 cursorColumn和cursorValue都不为null
+     */
+    public boolean useCursor() {
+        return this.useCursor != null
+                && this.useCursor
+                && this.cursorColumn != null
+                && this.cursorValue != null;
+    }
+
+    // ========== 新增：Cursor分页链式调用方法 ==========
+
+    /**
+     * 启用游标分页（ASC排序）
+     *
+     * @param cursorColumn 游标字段名（如 "id", "created_at"）
+     * @param cursorValue  游标值（上次查询最后一条记录的游标值）
+     * @return Page对象
+     */
+    public Page<E> cursor(String cursorColumn, Object cursorValue) {
+        this.useCursor = true;
+        setCursorColumn(cursorColumn);
+        this.cursorValue = cursorValue;
+        this.cursorGreaterThan = true; // 默认使用 >
+        return this;
+    }
+
+    /**
+     * 启用游标分页（指定排序方向）
+     *
+     * @param cursorColumn 游标字段名
+     * @param cursorValue  游标值
+     * @param greaterThan  true: 使用 > (ASC排序), false: 使用 < (DESC排序)
+     * @return Page对象
+     */
+    public Page<E> cursor(String cursorColumn, Object cursorValue, boolean greaterThan) {
+        this.useCursor = true;
+        setCursorColumn(cursorColumn);
+        this.cursorValue = cursorValue;
+        this.cursorGreaterThan = greaterThan;
+        return this;
+    }
+
+    /**
+     * 启用游标分页
+     *
+     * @return Page对象
+     */
+    public Page<E> enableCursor() {
+        this.useCursor = true;
+        return this;
+    }
+
+    /**
+     * 禁用游标分页
+     *
+     * @return Page对象
+     */
+    public Page<E> disableCursor() {
+        this.useCursor = false;
+        return this;
+    }
+
     public void setDialectClass(String dialectClass) {
         this.dialectClass = dialectClass;
     }
@@ -344,7 +480,8 @@ public class Page<E> extends ArrayList<E> implements Closeable {
     /**
      * 指定使用的分页实现，如果自己使用的很频繁，建议自己增加一层封装再使用
      *
-     * @param dialect 分页实现类，可以使用 {@link com.github.pagehelper.page.PageAutoDialect} 类中注册的别名，例如 "mysql", "oracle"
+     * @param dialect 分页实现类，可以使用 {@link com.github.pagehelper.page.PageAutoDialect}
+     *                类中注册的别名，例如 "mysql", "oracle"
      * @return
      */
     public Page<E> using(String dialect) {
@@ -376,7 +513,7 @@ public class Page<E> extends ArrayList<E> implements Closeable {
      * @return
      */
     public Page<E> pageNum(int pageNum) {
-        //分页合理化，针对不合理的页码自动处理
+        // 分页合理化，针对不合理的页码自动处理
         this.pageNum = ((reasonable != null && reasonable) && pageNum <= 0) ? 1 : pageNum;
         return this;
     }
@@ -507,7 +644,6 @@ public class Page<E> extends ArrayList<E> implements Closeable {
         return asyncCount(false);
     }
 
-
     public boolean asyncCount() {
         return this.asyncCount != null && this.asyncCount;
     }
@@ -621,6 +757,10 @@ public class Page<E> extends ArrayList<E> implements Closeable {
                 ", pages=" + pages +
                 ", reasonable=" + reasonable +
                 ", pageSizeZero=" + pageSizeZero +
+                ", useCursor=" + useCursor +
+                ", cursorColumn='" + cursorColumn + '\'' +
+                ", cursorValue=" + cursorValue +
+                ", cursorGreaterThan=" + cursorGreaterThan +
                 '}' + super.toString();
     }
 

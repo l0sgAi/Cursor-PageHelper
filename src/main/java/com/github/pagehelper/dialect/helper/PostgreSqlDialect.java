@@ -72,6 +72,32 @@ public class PostgreSqlDialect extends AbstractHelperDialect {
      */
     @Override
     public String getPageSql(String sql, Page page, CacheKey pageKey) {
+        // ========== Cursor分页SQL生成 ==========
+        if (page.useCursor()) {
+            StringBuilder sqlBuilder = new StringBuilder(sql.length() + 100);
+            sqlBuilder.append(sql);
+
+            // 智能添加WHERE或AND
+            String upperSql = sql.toUpperCase().trim();
+            if (containsWhereClauseInMainQuery(upperSql)) {
+                sqlBuilder.append("\n AND ");
+            } else {
+                sqlBuilder.append("\n WHERE ");
+            }
+
+            // 添加游标条件
+            sqlBuilder.append(page.getCursorColumn());
+            if (page.getCursorGreaterThan() != null && page.getCursorGreaterThan()) {
+                sqlBuilder.append(" > ?");
+            } else {
+                sqlBuilder.append(" < ?");
+            }
+
+            sqlBuilder.append("\n LIMIT ?");
+            return sqlBuilder.toString();
+        }
+
+        // ========== 传统分页SQL（原有逻辑） ==========
         StringBuilder sqlStr = new StringBuilder(sql.length() + 17);
         sqlStr.append(sql);
         if (page.getStartRow() == 0) {
@@ -80,6 +106,15 @@ public class PostgreSqlDialect extends AbstractHelperDialect {
             sqlStr.append(" LIMIT ? OFFSET ?");
         }
         return sqlStr.toString();
+    }
+
+    private boolean containsWhereClauseInMainQuery(String upperSql) {
+        int lastWhereIndex = upperSql.lastIndexOf("WHERE");
+        if (lastWhereIndex == -1) {
+            return false;
+        }
+        int lastFromIndex = upperSql.lastIndexOf("FROM");
+        return lastWhereIndex > lastFromIndex;
     }
 
 }
