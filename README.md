@@ -1,5 +1,6 @@
 ![MyBatis Pagination - PageHelper](logo.png)
-# MyBatis 分页插件 - PageHelper
+
+# MyBatis 分页插件 - PageHelper (cursor 修改版，支持游标分页，按照一个有序索引字段解决深分页问题)
 
 [![Build Status](https://travis-ci.org/pagehelper/Mybatis-PageHelper.svg?branch=master)](https://travis-ci.org/pagehelper/Mybatis-PageHelper)
 [![Maven central](https://maven-badges.herokuapp.com/maven-central/com.github.pagehelper/pagehelper/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.pagehelper/pagehelper)
@@ -19,9 +20,9 @@
 [京东](https://item.jd.com/12103309.html) ，[当当](http://product.dangdang.com/25098208.html)
 ，[亚马逊](https://www.amazon.cn/MyBatis从入门到精通-刘增辉/dp/B072RC11DM/ref=sr_1_18?ie=UTF8&qid=1498007125&sr=8-18&keywords=mybatis)
 
-CSDN博客：http://blog.csdn.net/isea533/article/details/73555400
+CSDN 博客：http://blog.csdn.net/isea533/article/details/73555400
 
-GitHub项目：https://github.com/mybatis-book/book
+GitHub 项目：https://github.com/mybatis-book/book
 
 ## 支持 [MyBatis 3.1.0+](https://github.com/mybatis/mybatis-3)
 
@@ -98,15 +99,15 @@ static {
 
 > 如果你使用的数据库不在这个列表时，你可以配置 `dialectAlias` 参数。
 >
->这个参数允许配置自定义实现的别名，可以用于根据 JDBCURL 自动获取对应实现，允许通过此种方式覆盖已有的实现，配置示例如（多个配置时使用分号隔开）：
+> 这个参数允许配置自定义实现的别名，可以用于根据 JDBCURL 自动获取对应实现，允许通过此种方式覆盖已有的实现，配置示例如（多个配置时使用分号隔开）：
 >
->```xml
-><property name="dialectAlias" value="oracle=com.github.pagehelper.dialect.helper.OracleDialect"/>
-><!-- 6.0支持下面的引用方式，引用 Oracle9iDialect.class 的实现 -->
-><property name="dialectAlias" value="oracle=oracle9i"/>
-><!-- 6.0支持下面的引用方式，达梦使用oracle语法分页，简化类全名写法 -->
-><property name="dialectAlias" value="dm=oracle"/>
->```
+> ```xml
+> <property name="dialectAlias" value="oracle=com.github.pagehelper.dialect.helper.OracleDialect"/>
+> <!-- 6.0支持下面的引用方式，引用 Oracle9iDialect.class 的实现 -->
+> <property name="dialectAlias" value="oracle=oracle9i"/>
+> <!-- 6.0支持下面的引用方式，达梦使用oracle语法分页，简化类全名写法 -->
+> <property name="dialectAlias" value="dm=oracle"/>
+> ```
 
 ## 使用 [QueryInterceptor 规范](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/src/main/java/com/github/pagehelper/QueryInterceptor.java)
 
@@ -184,8 +185,8 @@ https://github.com/pagehelper/Mybatis-PageHelper/issues/new
 
 MyBatis 专栏：
 
-- [MyBatis示例](http://blog.csdn.net/column/details/mybatis-sample.html)
-- [MyBatis问题集](http://blog.csdn.net/column/details/mybatisqa.html)
+- [MyBatis 示例](http://blog.csdn.net/column/details/mybatis-sample.html)
+- [MyBatis 问题集](http://blog.csdn.net/column/details/mybatisqa.html)
 
 ## 感谢所有项目贡献者！
 

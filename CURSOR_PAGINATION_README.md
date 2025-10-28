@@ -291,6 +291,64 @@ public void performanceComparison() {
 2. **参考** [CURSOR_IMPLEMENTATION_EXAMPLES.md](./CURSOR_IMPLEMENTATION_EXAMPLES.md) 获取详细代码
 3. **执行** 按照步骤逐步修改
 4. **测试** 验证功能和性能
-5. **部署** 享受高性能分页！
+5. **打包** 参考 [BUILD_AND_DEPLOY_GUIDE.md](./BUILD_AND_DEPLOY_GUIDE.md) 打包发布
+6. **部署** 享受高性能分页！
+
+## 📦 打包与发布
+
+修改完成后，查看 **[BUILD_AND_DEPLOY_GUIDE.md](./BUILD_AND_DEPLOY_GUIDE.md)** 了解如何打包使用。
+
+### 快速打包（推荐）
+
+**Windows 用户**：
+
+```bash
+# 双击运行
+build-local.bat
+
+# 或命令行运行
+.\build-local.bat
+```
+
+**Linux/Mac 用户**：
+
+```bash
+# 添加执行权限
+chmod +x build-local.sh
+
+# 运行
+./build-local.sh
+```
+
+### 手动打包
+
+```bash
+# 1. 修改版本号（pom.xml）
+<version>6.1.1-cursor-1.0.0</version>
+
+# 2. 编译打包
+mvn clean package -DskipTests
+
+# 3. 安装到本地
+mvn clean install -DskipTests
+
+# 4. 在项目中使用
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper</artifactId>
+    <version>6.1.1-cursor-1.0.0</version>
+</dependency>
+```
+
+### 更多选项
+
+- 📦 **本地使用** - 5 分钟快速打包（推荐）
+- 🏢 **私有仓库** - 团队内部共享
+- 🌍 **Maven 中央仓库** - 开源分享
+- 🤝 **向官方贡献** - 提交 Pull Request
+
+详见：[BUILD_AND_DEPLOY_GUIDE.md](./BUILD_AND_DEPLOY_GUIDE.md)
+
+---
 
 Good luck! 🚀
