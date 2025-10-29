@@ -46,20 +46,58 @@ import java.util.Map;
 public class PostgreSqlDialect extends AbstractHelperDialect {
 
     @Override
-    public Object processPageParameter(MappedStatement ms, Map<String, Object> paramMap, Page page, BoundSql boundSql, CacheKey pageKey) {
+    public Object processPageParameter(MappedStatement ms, Map<String, Object> paramMap, Page page, BoundSql boundSql,
+            CacheKey pageKey) {
+        // ========== Cursor分页参数处理 ==========
+        if (page.useCursor()) {
+            paramMap.put(PAGEPARAMETER_CURSOR_COLUMN, page.getCursorColumn());
+            paramMap.put(PAGEPARAMETER_CURSOR_VALUE, page.getCursorValue());
+            paramMap.put(PAGEPARAMETER_SECOND, page.getPageSize());
+
+            // 更新缓存键
+            pageKey.update(page.getCursorColumn());
+            pageKey.update(page.getCursorValue());
+            pageKey.update(page.getPageSize());
+            pageKey.update(page.getCursorGreaterThan());
+
+            // 处理参数映射
+            if (boundSql.getParameterMappings() != null) {
+                List<ParameterMapping> newParameterMappings = new ArrayList<>(boundSql.getParameterMappings());
+
+                // 添加游标值参数
+                Class<?> cursorValueClass = page.getCursorValue().getClass();
+                newParameterMappings.add(
+                        new ParameterMapping.Builder(ms.getConfiguration(), PAGEPARAMETER_CURSOR_VALUE,
+                                cursorValueClass).build());
+
+                // 添加pageSize参数
+                newParameterMappings.add(
+                        new ParameterMapping.Builder(ms.getConfiguration(), PAGEPARAMETER_SECOND, int.class).build());
+
+                MetaObject metaObject = MetaObjectUtil.forObject(boundSql);
+                metaObject.setValue("parameterMappings", newParameterMappings);
+            }
+            return paramMap;
+        }
+
+        // ========== 传统分页参数处理（保持原有逻辑） ==========
         paramMap.put(PAGEPARAMETER_SECOND, page.getPageSize());
         paramMap.put(PAGEPARAMETER_FIRST, page.getStartRow());
-        //处理pageKey
+        // 处理pageKey
         pageKey.update(page.getPageSize());
         pageKey.update(page.getStartRow());
-        //处理参数配置
+        // 处理参数配置
         if (boundSql.getParameterMappings() != null) {
-            List<ParameterMapping> newParameterMappings = new ArrayList<ParameterMapping>(boundSql.getParameterMappings());
+            List<ParameterMapping> newParameterMappings = new ArrayList<ParameterMapping>(
+                    boundSql.getParameterMappings());
             if (page.getStartRow() == 0) {
-                newParameterMappings.add(new ParameterMapping.Builder(ms.getConfiguration(), PAGEPARAMETER_SECOND, int.class).build());
+                newParameterMappings.add(
+                        new ParameterMapping.Builder(ms.getConfiguration(), PAGEPARAMETER_SECOND, int.class).build());
             } else {
-                newParameterMappings.add(new ParameterMapping.Builder(ms.getConfiguration(), PAGEPARAMETER_SECOND, int.class).build());
-                newParameterMappings.add(new ParameterMapping.Builder(ms.getConfiguration(), PAGEPARAMETER_FIRST, long.class).build());
+                newParameterMappings.add(
+                        new ParameterMapping.Builder(ms.getConfiguration(), PAGEPARAMETER_SECOND, int.class).build());
+                newParameterMappings.add(
+                        new ParameterMapping.Builder(ms.getConfiguration(), PAGEPARAMETER_FIRST, long.class).build());
             }
             MetaObject metaObject = MetaObjectUtil.forObject(boundSql);
             metaObject.setValue("parameterMappings", newParameterMappings);
@@ -68,32 +106,41 @@ public class PostgreSqlDialect extends AbstractHelperDialect {
     }
 
     /**
-     * 构建 <a href="https://www.postgresql.org/docs/current/queries-limit.html">PostgreSQL</a>分页查询语句
+     * 构建 <a href=
+     * "https://www.postgresql.org/docs/current/queries-limit.html">PostgreSQL</a>分页查询语句
      */
     @Override
     public String getPageSql(String sql, Page page, CacheKey pageKey) {
         // ========== Cursor分页SQL生成 ==========
         if (page.useCursor()) {
-            StringBuilder sqlBuilder = new StringBuilder(sql.length() + 100);
-            sqlBuilder.append(sql);
+            String trimmedSql = sql.trim();
+            String upperSql = trimmedSql.toUpperCase();
 
-            // 智能添加WHERE或AND
-            String upperSql = sql.toUpperCase().trim();
+            // 查找主查询中ORDER BY、GROUP BY、HAVING等子句的位置
+            int insertPosition = findInsertPositionForCursorCondition(upperSql, trimmedSql);
+
+            // 构建游标条件
+            StringBuilder cursorCondition = new StringBuilder();
             if (containsWhereClauseInMainQuery(upperSql)) {
-                sqlBuilder.append("\n AND ");
+                cursorCondition.append("\n AND ");
             } else {
-                sqlBuilder.append("\n WHERE ");
+                cursorCondition.append("\n WHERE ");
             }
 
-            // 添加游标条件
-            sqlBuilder.append(page.getCursorColumn());
+            cursorCondition.append(page.getCursorColumn());
             if (page.getCursorGreaterThan() != null && page.getCursorGreaterThan()) {
-                sqlBuilder.append(" > ?");
+                cursorCondition.append(" > ?");
             } else {
-                sqlBuilder.append(" < ?");
+                cursorCondition.append(" < ?");
             }
 
+            // 在正确的位置插入游标条件
+            StringBuilder sqlBuilder = new StringBuilder(sql.length() + 100);
+            sqlBuilder.append(trimmedSql, 0, insertPosition);
+            sqlBuilder.append(cursorCondition);
+            sqlBuilder.append(trimmedSql.substring(insertPosition));
             sqlBuilder.append("\n LIMIT ?");
+
             return sqlBuilder.toString();
         }
 
@@ -108,13 +155,74 @@ public class PostgreSqlDialect extends AbstractHelperDialect {
         return sqlStr.toString();
     }
 
-    private boolean containsWhereClauseInMainQuery(String upperSql) {
-        int lastWhereIndex = upperSql.lastIndexOf("WHERE");
-        if (lastWhereIndex == -1) {
-            return false;
+    /**
+     * 查找插入游标条件的正确位置
+     * 需要在主查询的WHERE之后、ORDER BY/GROUP BY/HAVING之前插入
+     */
+    private int findInsertPositionForCursorCondition(String upperSql, String originalSql) {
+        // 需要查找的关键字（按优先级排序）
+        // 包括标准SQL子句和PostgreSQL特有的锁定、窗口函数等子句
+        String[] keywords = { "UNION", "UNION ALL", "INTERSECT", "EXCEPT",
+                "ORDER BY", "GROUP BY", "HAVING", "WINDOW",
+                "LIMIT", "OFFSET", "FETCH",
+                "FOR UPDATE", "FOR NO KEY UPDATE", "FOR SHARE", "FOR KEY SHARE" };
+
+        int minPosition = originalSql.length(); // 默认在末尾
+
+        // 找到所有关键字在主查询中的位置，取最小值
+        for (String keyword : keywords) {
+            int pos = findKeywordInMainQuery(upperSql, keyword);
+            if (pos != -1 && pos < minPosition) {
+                minPosition = pos;
+            }
         }
-        int lastFromIndex = upperSql.lastIndexOf("FROM");
-        return lastWhereIndex > lastFromIndex;
+
+        return minPosition;
+    }
+
+    /**
+     * 查找关键字在主查询中的位置（排除子查询和括号内的内容）
+     */
+    private int findKeywordInMainQuery(String upperSql, String keyword) {
+        int parenthesesDepth = 0;
+        int sqlLength = upperSql.length();
+        int keywordLength = keyword.length();
+
+        for (int i = 0; i < sqlLength; i++) {
+            char c = upperSql.charAt(i);
+
+            if (c == '(') {
+                parenthesesDepth++;
+            } else if (c == ')') {
+                parenthesesDepth--;
+            } else if (parenthesesDepth == 0) {
+                // 只在主查询层级查找
+                if (i + keywordLength <= sqlLength) {
+                    String segment = upperSql.substring(i, i + keywordLength);
+                    if (segment.equals(keyword)) {
+                        // 确保关键字前后是空白字符或开头/结尾
+                        boolean validBefore = (i == 0 || Character.isWhitespace(upperSql.charAt(i - 1)));
+                        boolean validAfter = (i + keywordLength >= sqlLength ||
+                                Character.isWhitespace(upperSql.charAt(i + keywordLength)));
+                        if (validBefore && validAfter) {
+                            return i;
+                        }
+                    }
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * 检查主查询是否包含WHERE子句
+     * 需要排除子查询中的WHERE
+     */
+    private boolean containsWhereClauseInMainQuery(String upperSql) {
+        // 使用新的方法来查找WHERE关键字
+        int wherePosition = findKeywordInMainQuery(upperSql, "WHERE");
+        return wherePosition != -1;
     }
 
 }

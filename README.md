@@ -1,6 +1,10 @@
 ![MyBatis Pagination - PageHelper](logo.png)
 
-# MyBatis 分页插件 - PageHelper (cursor 修改版，支持游标分页，按照一个有序索引字段解决深分页问题)
+# MyBatis 分页插件 - PageHelper
+
+**(cursor 修改版，支持游标分页，按照一个有序索引字段解决深分页问题)**
+
+**目前是完全的测试版，非常不可靠，请勿用于生产环境。**
 
 [![Build Status](https://travis-ci.org/pagehelper/Mybatis-PageHelper.svg?branch=master)](https://travis-ci.org/pagehelper/Mybatis-PageHelper)
 [![Maven central](https://maven-badges.herokuapp.com/maven-central/com.github.pagehelper/pagehelper/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.pagehelper/pagehelper)

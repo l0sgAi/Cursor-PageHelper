@@ -28,24 +28,24 @@
 
     <groupId>com.github.pagehelper</groupId>
     <artifactId>pagehelper</artifactId>
-    <version>6.1.1</version>
+    <version>6.1.1-cursor-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>pagehelper 6</name>
-    <description>Mybatis Pagination Plugin</description>
-    <url>https://github.com/pagehelper/Mybatis-PageHelper</url>
+    <name>pagehelper 6 - Cursor Pagination</name>
+    <description>Mybatis Pagination Plugin with Cursor Support</description>
+    <url>https://github.com/l0sgAi/Cursor-PageHelper</url>
 
     <licenses>
         <license>
             <name>The MIT License (MIT)</name>
-            <url>https://github.com/pagehelper/Mybatis-PageHelper/blob/master/LICENSE</url>
+            <url>https://github.com/l0sgAi/Cursor-PageHelper/blob/master/LICENSE</url>
         </license>
     </licenses>
 
     <developers>
         <developer>
-            <name>abel533</name>
-            <email>abel533@gmail.com</email>
+            <name>losgai</name>
+            <email>losgai719@gmail.com</email>
         </developer>
     </developers>
 
