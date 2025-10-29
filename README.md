@@ -1,199 +1,220 @@
-![MyBatis Pagination - PageHelper](logo.png)
-
-# MyBatis 分页插件 - PageHelper
-
-**(cursor 修改版，支持游标分页，按照一个有序索引字段解决深分页问题)**
-
-**目前是完全的测试版，非常不可靠，请勿用于生产环境。**
-
-[![Build Status](https://travis-ci.org/pagehelper/Mybatis-PageHelper.svg?branch=master)](https://travis-ci.org/pagehelper/Mybatis-PageHelper)
-[![Maven central](https://maven-badges.herokuapp.com/maven-central/com.github.pagehelper/pagehelper/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.pagehelper/pagehelper)
-
-[English](README_en.md)
-
-如果你也在用 MyBatis，建议尝试该分页插件，这一定是<b>最方便</b>使用的分页插件。
-
-分页插件支持任何复杂的单表、多表分页，部分特殊情况请看[重要提示](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/wikis/zh/Important.md)。
-
-想要使用分页插件？请看[如何使用分页插件](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/wikis/zh/HowToUse.md)。
-
-## 《MyBatis 从入门到精通》
-
-![MyBatis 从入门到精通](https://github.com/mybatis-book/book/raw/master/book.png)
-
-[京东](https://item.jd.com/12103309.html) ，[当当](http://product.dangdang.com/25098208.html)
-，[亚马逊](https://www.amazon.cn/MyBatis从入门到精通-刘增辉/dp/B072RC11DM/ref=sr_1_18?ie=UTF8&qid=1498007125&sr=8-18&keywords=mybatis)
-
-CSDN 博客：http://blog.csdn.net/isea533/article/details/73555400
-
-GitHub 项目：https://github.com/mybatis-book/book
+# PageHelper-Cursor
 
 ## 支持 [MyBatis 3.1.0+](https://github.com/mybatis/mybatis-3)
 
-## PageHelper 6 支持 jdk8+
+**(PageHelper的cursor 修改版，支持游标分页，按照一个有序索引字段解决深分页问题)**
 
-## PageHelper 5 支持 jdk6+
+**目前是完全的测试版，可靠性未经完整测试，请勿用于生产环境。**
 
-## 物理分页
+## 介绍
+`PageHelper-Cursor` 是基于`PageHelper6.1.1`的`cursor`分页实现，支持按照一个有序索引字段解决深分页问题。
 
-该插件目前支持以下数据库的<b>物理分页</b> [PageAutoDialect](src/main/java/com/github/pagehelper/page/PageAutoDialect.java):
+### 主要特性
 
-```java
-static {
-    //注册别名
-    registerDialectAlias("hsqldb",HsqldbDialect.class);
-    registerDialectAlias("h2",HsqldbDialect.class);
-    registerDialectAlias("phoenix",HsqldbDialect.class);
+1. 支持按照一个有序索引字段解决深分页问题
+2. 目前只支持MySQL和PostgreSQL
 
-    registerDialectAlias("postgresql",PostgreSqlDialect.class);
+### 注意：
+> 所使用的排序字段必须有索引，否则深分页的性能优化将是无效的。
 
-    registerDialectAlias("mysql",MySqlDialect.class);
-    registerDialectAlias("mariadb",MySqlDialect.class);
-    registerDialectAlias("sqlite",MySqlDialect.class);
+### 使用方法
 
-    registerDialectAlias("herddb",HerdDBDialect.class);
-
-    registerDialectAlias("oracle",OracleDialect.class);
-    registerDialectAlias("oracle9i",Oracle9iDialect.class);
-    registerDialectAlias("db2",Db2Dialect.class);
-    registerDialectAlias("as400",AS400Dialect.class);
-    registerDialectAlias("informix",InformixDialect.class);
-    //解决 informix-sqli #129，仍然保留上面的
-    registerDialectAlias("informix-sqli",InformixDialect.class);
-
-    registerDialectAlias("sqlserver",SqlServerDialect.class);
-    registerDialectAlias("sqlserver2012",SqlServer2012Dialect.class);
-
-    registerDialectAlias("derby",SqlServer2012Dialect.class);
-    //达梦数据库,https://github.com/mybatis-book/book/issues/43
-    registerDialectAlias("dm",OracleDialect.class);
-    //阿里云PPAS数据库,https://github.com/pagehelper/Mybatis-PageHelper/issues/281
-    registerDialectAlias("edb",OracleDialect.class);
-    //神通数据库
-    registerDialectAlias("oscar",OscarDialect.class);
-    registerDialectAlias("clickhouse",MySqlDialect.class);
-    //瀚高数据库
-    registerDialectAlias("highgo",HsqldbDialect.class);
-    //虚谷数据库
-    registerDialectAlias("xugu",HsqldbDialect.class);
-    registerDialectAlias("impala",HsqldbDialect.class);
-    registerDialectAlias("firebirdsql",FirebirdDialect.class);
-    //人大金仓数据库
-    registerDialectAlias("kingbase",PostgreSqlDialect.class);
-    // 人大金仓新版本kingbase8
-    registerDialectAlias("kingbase8",PostgreSqlDialect.class);
-    //行云数据库
-    registerDialectAlias("xcloud",CirroDataDialect.class);
-
-    //openGauss数据库
-    registerDialectAlias("opengauss",PostgreSqlDialect.class);
-
-    //注册 AutoDialect
-    //想要实现和以前版本相同的效果时，可以配置 autoDialectClass=old
-    registerAutoDialectAlias("old",DefaultAutoDialect.class);
-    registerAutoDialectAlias("hikari",HikariAutoDialect.class);
-    registerAutoDialectAlias("druid",DruidAutoDialect.class);
-    registerAutoDialectAlias("tomcat-jdbc",TomcatAutoDialect.class);
-    registerAutoDialectAlias("dbcp",DbcpAutoDialect.class);
-    registerAutoDialectAlias("c3p0",C3P0AutoDialect.class);
-    //不配置时，默认使用 DataSourceNegotiationAutoDialect
-    registerAutoDialectAlias("default",DataSourceNegotiationAutoDialect.class);
-}
-```
-
-> 如果你使用的数据库不在这个列表时，你可以配置 `dialectAlias` 参数。
->
-> 这个参数允许配置自定义实现的别名，可以用于根据 JDBCURL 自动获取对应实现，允许通过此种方式覆盖已有的实现，配置示例如（多个配置时使用分号隔开）：
->
-> ```xml
-> <property name="dialectAlias" value="oracle=com.github.pagehelper.dialect.helper.OracleDialect"/>
-> <!-- 6.0支持下面的引用方式，引用 Oracle9iDialect.class 的实现 -->
-> <property name="dialectAlias" value="oracle=oracle9i"/>
-> <!-- 6.0支持下面的引用方式，达梦使用oracle语法分页，简化类全名写法 -->
-> <property name="dialectAlias" value="dm=oracle"/>
-> ```
-
-## 使用 [QueryInterceptor 规范](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/src/main/java/com/github/pagehelper/QueryInterceptor.java)
-
-[Executor 拦截器高级教程 - QueryInterceptor 规范](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/wikis/zh/Interceptor.md)
-
-## 集成
-
-使用 PageHelper 你只需要在 classpath
-中包含 [pagehelper-x.y.z.jar](http://repo1.maven.org/maven2/com/github/pagehelper/pagehelper/)
-和 [jsqlparser-x.y.z.jar](http://repo1.maven.org/maven2/com/github/jsqlparser/jsqlparser/)。
-
-> pagehelper 和 jsqlparser 对应关系参考 pom.xml 中的依赖版本。
-
-如果你使用 Maven，你只需要在 pom.xml 中添加下面的依赖：
-
+需要`Mybatis3.1.0+`环境，如果您在SpringBoot上开发应用，请同时引入：
 ```xml
+<!--SpringBoot分页插件整合-->
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper-spring-boot-starter</artifactId>
+    <version>${pagehelper-spring-boot-starter.version}</version>
+</dependency>
 
+<!--pagehelper-cursor分页插件整合-->
 <dependency>
     <groupId>com.github.pagehelper</groupId>
     <artifactId>pagehelper</artifactId>
-    <version>最新版本</version>
+    <version>6.1.1-cursor-SNAPSHOT</version>
 </dependency>
 ```
 
-如果你使用 Spring Boot 可以参考： [pagehelper-spring-boot-starter](https://github.com/pagehelper/pagehelper-spring-boot)
+**例1：使用有序自增id分页**
+```java
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
 
-[继续查看配置和用法](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/wikis/zh/HowToUse.md)
+    @Autowired
+    private UserMapper userMapper;
 
-## 文档：
+    @GetMapping
+    public PageInfo<User> getUsers(
+        @RequestParam(required = false, defaultValue = "0") Long cursor) {
 
-- [如何使用分页插件](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/wikis/zh/HowToUse.md)
-- [更新日志](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/wikis/zh/Changelog.md)
-- [重要提示](https://github.com/pagehelper/Mybatis-PageHelper/blob/master/wikis/zh/Important.md)
+        // 使用 Cursor 分页
+        PageHelper.startCursor("id", cursor, 20);
+        List<User> users = userMapper.selectAll();
 
-## Spring 集成示例
+        return new PageInfo<>(users);
+    }
+}
+```
+**例2：使用`create_time`字段分页**
+```java
+    @GetMapping("/listWithCursor")
+    @Tag(name = "获取所有评论信息", description = "管理员分页获取当前所有评论信息列表")
+    public Result<List<TopCommentVo>> queryWithCursor(
+            @RequestParam(required = false) String keyWord,
+            @RequestParam(defaultValue = "0") String lastDate,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        if(lastDate.equals("0")){
+            lastDate = null;
+        }
+        // 开启分页
+        PageHelper.startCursor("c.create_time",lastDate,pageSize,false);
+        // 执行查询
+        List<TopCommentVo> list = commentService.query(keyWord);
+        // 获取分页信息
+        PageInfo<TopCommentVo> pageInfo = new PageInfo<>(list);
+        // 清理分页
+        PageHelper.clearPage();
+        // 使用自定义分页返回方法
+        return Result.page(list, pageInfo.getTotal());
+    }
+```
 
-- [集成 Spring 3.x](https://github.com/abel533/Mybatis-Spring/tree/spring3.x)
-- [集成 Spring 4.x](https://github.com/abel533/Mybatis-Spring)
-- [集成 Spring Boot](https://github.com/abel533/MyBatis-Spring-Boot)
+# 📁 文档导航
 
-## 提交 BUG
+本改造方案包含以下文档：
 
-https://github.com/pagehelper/Mybatis-PageHelper/issues/new
+1. **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** ⭐ **推荐先看**
 
-## 微信公众号
+    - 架构对比图
+    - 需要修改的文件清单
+    - 核心代码片段
+    - 使用对比示例
+    - 性能提升数据
+    - 修改步骤建议
 
-<img src="wx_mybatis.jpg" height="300"/>
+2. **[CURSOR_PAGINATION_GUIDE.md](./CURSOR_PAGINATION_GUIDE.md)**
 
-## 项目的发展离不开你的支持
+    - 完整的改造方案说明
+    - 为什么需要 Cursor 分页
+    - 详细的修改指南
+    - 使用示例
+    - 注意事项
+    - 性能对比
 
-### 请作者喝杯咖啡吧！
+3. **[CURSOR_IMPLEMENTATION_EXAMPLES.md](./CURSOR_IMPLEMENTATION_EXAMPLES.md)**
+    - 所有文件的详细代码示例
+    - 逐行注释的实现代码
+    - 完整的测试用例
+    - 最佳实践建议
 
-<img src="ali_pay.png" height="300"/>
+## 🔑 核心修改文件
 
-<img src="wx_pay.png" height="300"/>
+### 已经修改
 
-## 作者信息
+| 文件                | 修改内容                | 重要性     |
+| ------------------- | ----------------------- | ---------- |
+| `Constant.java`     | 添加 2 个游标参数常量   | ⭐⭐⭐     |
+| `Page.java`         | 添加游标字段和方法      | ⭐⭐⭐⭐⭐ |
+| `PageMethod.java`   | 添加 Cursor 分页 API    | ⭐⭐⭐⭐   |
+| `MySqlDialect.java` | 实现 MySQL 游标分页 SQL | ⭐⭐⭐⭐⭐ |
 
-网站：https://mybatis.io
+### 未来可能的支持项
 
-作者博客：http://blog.csdn.net/isea533
+| 文件                     | 说明            |
+| ------------------------ | --------------- |
+| `PostgreSqlDialect.java` | PostgreSQL 支持 |
+| `OracleDialect.java`     | Oracle 支持     |
+| `SqlServerDialect.java`  | SQL Server 支持 |
+| 其他 Dialect...          | 按需修改        |
 
-作者邮箱： abel533@gmail.com
+## 📚 进一步阅读
 
-如需加群，请通过 http://mybatis.io 首页按钮加群。
+- [MySQL LIMIT 优化](https://dev.mysql.com/doc/refman/8.0/en/limit-optimization.html)
+- [PostgreSQL OFFSET 性能问题](https://www.postgresql.org/docs/current/queries-limit.html)
+- [Seek Method 分页](https://use-the-index-luke.com/no-offset)
 
-本项目在 github 的项目地址：https://github.com/pagehelper/Mybatis-PageHelper
+## 🤝 贡献
 
-本项目在 gitosc 的项目地址：http://git.oschina.net/free/Mybatis_PageHelper
+如果您对改造方案有任何建议或发现问题，欢迎：
 
-## MyBatis-3
+- 提出 Issue
+- 提交 Pull Request
+- 分享使用经验
 
-- 项目：https://github.com/mybatis/mybatis-3
-- 文档：http://mybatis.github.io/mybatis-3/zh/index.html
+## 📄 许可
 
-MyBatis 专栏：
+本改造方案遵循 PageHelper 的 MIT 许可证。
 
-- [MyBatis 示例](http://blog.csdn.net/column/details/mybatis-sample.html)
-- [MyBatis 问题集](http://blog.csdn.net/column/details/mybatisqa.html)
+---
 
-## 感谢所有项目贡献者！
+## 🎉 开始改造
 
-<a href="https://github.com/pagehelper/Mybatis-PageHelper/graphs/contributors">
-  <img src="https://contributors-img.web.app/image?repo=pagehelper/Mybatis-PageHelper" />
-</a>
+1. **阅读** [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) 了解整体方案
+2. **参考** [CURSOR_IMPLEMENTATION_EXAMPLES.md](./CURSOR_IMPLEMENTATION_EXAMPLES.md) 获取详细代码
+3. **执行** 按照步骤逐步修改
+4. **测试** 验证功能和性能
+5. **打包** 参考 [BUILD_AND_DEPLOY_GUIDE.md](./BUILD_AND_DEPLOY_GUIDE.md) 打包发布
+6. **部署** 享受高性能分页！
+
+## 📦 打包与发布
+
+修改完成后，查看 **[BUILD_AND_DEPLOY_GUIDE.md](./BUILD_AND_DEPLOY_GUIDE.md)** 了解如何打包使用。
+
+### 快速打包（推荐）
+
+**Windows 用户**：
+
+```bash
+# 双击运行
+build-local.bat
+
+# 或命令行运行
+.\build-local.bat
+```
+
+**Linux/Mac 用户**：
+
+```bash
+# 添加执行权限
+chmod +x build-local.sh
+
+# 运行
+./build-local.sh
+```
+
+### 手动打包
+
+```bash
+# 1. 修改版本号（pom.xml）
+<version>6.1.1-cursor-1.0.0</version>
+
+# 2. 编译打包
+mvn clean package -DskipTests
+
+# 3. 安装到本地
+mvn clean install -DskipTests
+
+# 4. 在项目中使用
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper</artifactId>
+    <version>6.1.1-cursor-1.0.0</version>
+</dependency>
+```
+
+### 更多选项
+
+- 📦 **本地使用** - 5 分钟快速打包（推荐）
+- 🏢 **私有仓库** - 团队内部共享
+- 🌍 **Maven 中央仓库** - 开源分享
+- 🤝 **向官方贡献** - 提交 Pull Request
+
+详见：[BUILD_AND_DEPLOY_GUIDE.md](./BUILD_AND_DEPLOY_GUIDE.md)
+
+---
+
+Good luck! 🚀
+
+
